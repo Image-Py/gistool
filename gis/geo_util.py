@@ -1,6 +1,6 @@
 from .geo_struct import *
 from .geo_prj import *
-import gdal, cv2
+import gdal#, cv2
 from PIL import Image, ImageDraw
 from osgeo import osr, ogr
 from time import time

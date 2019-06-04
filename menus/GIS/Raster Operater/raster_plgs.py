@@ -1,4 +1,4 @@
-from imagepy.plugins.gistool.gis import geo_util, geo_struct
+from ....gis import geo_util, geo_struct
 from imagepy import IPy
 from imagepy.core import ImagePlus
 from imagepy.core.engine import Simple

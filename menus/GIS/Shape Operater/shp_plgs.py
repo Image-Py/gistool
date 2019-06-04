@@ -1,5 +1,5 @@
 from imagepy.core.engine import Table
-from imagepy.plugins.gistool.gis import geo_util
+from ....gis import geo_util
 from imagepy import IPy
 from imagepy.core import ImagePlus
 
