@@ -12,8 +12,6 @@ from skimage.io import imsave
 from shapely.geometry import GeometryCollection
 
 def shp2raster(shape, scale, margin=0.05, style='lab', bounds=None):
-    print(shape.columns)
-    print(shape.prj)
     shapes = shape['shape'].values
     kmargin = margin/(1-2*margin)
     geoms = list(shape['shape'].values)
@@ -63,7 +61,6 @@ def shp2mask(shp, raster, style='lab'):
     return Raster([msk], raster.prj, raster.m)
 
 def mp2pm(boxs, m1, prj1, prj2, m2, t1 = lambda x:x, t2 = lambda x:x):
-    print(prj1, prj2)
     box = t1(np.dot(m1[:,1:], np.array(boxs).T) + m1[:,:1])
     ct = osr.CoordinateTransformation(prj1, prj2)
     box = t2(np.array(ct.TransformPoints(box.T)).T)

@@ -110,7 +110,6 @@ if __name__ == '__main__':
     
     
     infos = parse(wb)
-    print(infos)
     fill_value(wb, infos, data)
     wb.save('new.xlsx')
     
