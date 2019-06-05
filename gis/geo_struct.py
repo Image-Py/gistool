@@ -14,14 +14,15 @@ class Raster:
     def __init__(self, imgs, prj, m):
         self.imgs, self.prj, self.m = imgs, prj, m
 
-def read_tif(path, chans=[0]):
+def read_tif(path, chans=None):
     ds = gdal.Open(path)
+    if chans is None: chans = range(ds.RasterCount)
     prj = osr.SpatialReference()
     prj.ImportFromWkt(ds.GetProjection())
     m = ds.GetGeoTransform()
     m = np.array(m).reshape((2,3))
     imgs = [ds.GetRasterBand(i+1).ReadAsArray() for i in chans]
-    return Raster(imgs, prj, m)
+    return [(i, prj, m) for i in imgs]
 
 def read_hdf(path, chans=None):
     ds = gdal.Open(path)
@@ -35,8 +36,8 @@ def read_hdf(path, chans=None):
         m = np.array(m).reshape((2,3))
         prj = osr.SpatialReference()
         prj.ImportFromWkt(ds.GetProjection())
-        imgs.append(img)
-    return Raster(imgs, prj, m)
+        imgs.append((img, prj, m))
+    return imgs
     
 def read_shp(path, encoding='utf-8'):
     sf = shapefile.Reader(path, encoding=encoding)
@@ -59,18 +60,18 @@ def read_shp(path, encoding='utf-8'):
     return df
 
 def write_tif(raster, path):
+    if isinstance(raster, tuple): raster = [raster]
     driver = gdal.GetDriverByName("GTiff")
-    imgs, prj, m = raster.imgs, raster.prj, raster.m
     tps = {np.uint8:gdal.GDT_Byte, np.int16:gdal.GDT_Int16,
            np.int32:gdal.GDT_Int32, np.uint16:gdal.GDT_UInt16,
            np.uint32:gdal.GDT_UInt32, np.float32:gdal.GDT_Float32,
            np.float64:gdal.GDT_Float64}
-    tif = driver.Create(path, imgs[0].shape[1], imgs[0].shape[0],
-                        len(raster.imgs), tps[imgs[0].dtype.type])
-    tif.SetGeoTransform(m.ravel())
-    tif.SetProjection(prj.ExportToWkt())
-    for i in range(len(imgs)):
-        tif.GetRasterBand(i+1).WriteArray(imgs[i])
+    tif = driver.Create(path, raster[0][0].shape[1], raster[0][0].shape[0],
+                        len(raster), tps[raster[0][0].dtype.type])
+    tif.SetGeoTransform(raster[0][2].ravel())
+    tif.SetProjection(raster[0][1].ExportToWkt())
+    for i in range(len(raster)):
+        tif.GetRasterBand(i+1).WriteArray(raster[i][0])
     
 def plot_shp(shp, color='blue'):
     for geom in shp['shape']:

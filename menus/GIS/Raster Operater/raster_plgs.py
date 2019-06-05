@@ -1,4 +1,4 @@
-from ....gis import geo_util, geo_struct
+from ....gis import geo_util, geo_struct, geo_indicate
 from imagepy import IPy
 from imagepy.core import ImagePlus
 from imagepy.core.engine import Simple
@@ -16,19 +16,18 @@ class RasterCombine(Simple):
             
     #process
     def run(self, ips, imgs, para = None):
-        if not('prj' in ips.data and 'trans' in ips.data):
+        if not('prjs' in ips.data and 'trans' in ips.data):
             return IPy.alert('need projection and transform matrix!')
         objs = ImageManager.get(para['fragments'])
         if not('prjs' in objs.data and 'trans' in objs.data):
             return IPy.alert('need projection and transform matrix!')
-
-        goal = geo_struct.Raster(imgs, ips.data['prj'], ips.data['trans'])
-        objs = zip(objs.imgs, objs.data['prjs'], objs.data['trans'])
-        rasters = [geo_struct.Raster([i[0]], i[1], i[2]) for i in objs]
-        rst = geo_util.rasters2one(rasters, goal, para['step'])
-
-        ips = ImagePlus(rst.imgs, ips.title+'-combine')
-        ips.data['prj'], ips.data['trans'] = goal.prj, goal.m
+        goal = (imgs[0], ips.data['prjs'][0], ips.data['trans'][0])
+        rasters = zip(objs.imgs, objs.data['prjs'], objs.data['trans'])
+        
+        rst = geo_util.rasters2des(list(rasters), goal, para['step'])
+        
+        ips = ImagePlus([rst[0]], ips.title+'-combine')
+        ips.data['prjs'], ips.data['trans'] = [rst[1]], [rst[2]]
         IPy.show_ips(ips)
 
 class NDVI(Simple):
@@ -44,15 +43,14 @@ class NDVI(Simple):
     def run(self, ips, imgs, para = None):
         ips1 = ImageManager.get(para['b1'])
         ips2 = ImageManager.get(para['b2'])
-        imgs = []
-        for i in range(len(ips1.imgs)):
-            b2, b1 = ips2.imgs[i], ips1.imgs[i]
-            b1 = np.clip(b1, 1, 1e8, out=b1)
-            b2 = np.clip(b2, 1, 1e8, out=b2)
-            ndvi = (((b2-b1)/(b2+b1)+1)/2*255+0.5).astype(np.uint8)
-            imgs.append(ndvi)
+        rs1 = zip(ips1.imgs, ips1.data['prjs'], ips1.data['trans'])
+        rs2 = zip(ips2.imgs, ips2.data['prjs'], ips2.data['trans'])
+        rsts = []
+        for r1, r2 in zip(rs1, rs2):
+            rsts.append(geo_indicate.count_ndvi(r1, r2))
+        imgs, prjs, trans = zip(*rsts)
         ips = ImagePlus(imgs, ips1.title+'-ndvi')
-        ips.data = ips1.data
+        ips.data['prjs'], ips.data['trans'] = prjs, trans
         IPy.show_ips(ips)
 
 plgs = [RasterCombine, NDVI]

@@ -11,7 +11,7 @@ from shapely.ops import transform
 from skimage.io import imsave
 from shapely.geometry import GeometryCollection
 
-def shp2raster(shape, scale, margin=0.05, style='lab', bounds=None):
+def shp2raster(shape, scale, margin=0.05, value=0, width=0, dtype=np.uint8, bounds=None):
     shapes = shape['shape'].values
     kmargin = margin/(1-2*margin)
     geoms = list(shape['shape'].values)
@@ -23,7 +23,7 @@ def shp2raster(shape, scale, margin=0.05, style='lab', bounds=None):
         scale = max(w/W, h/H)
     offsetx, offsety = l-w*kmargin, b+h*kmargin
     shp = np.array((h,w))*(1+(kmargin*2))/scale
-    rst = np.zeros(shp.astype(np.int), dtype=np.int16)
+    rst = np.zeros(shp.astype(np.int), dtype=dtype)
     m = [1/scale, 0, 0, -1/scale, -offsetx/scale, offsety/scale]
     img = Image.fromarray(rst)
     draw = ImageDraw.Draw(img)
@@ -31,34 +31,16 @@ def shp2raster(shape, scale, margin=0.05, style='lab', bounds=None):
         gs = affine_transform(shapes[i], m)
         for g in gs:
             pts = np.array(g.exterior.xy).T.astype(np.int).ravel()
-            if style=='lab': draw.polygon(list(pts), i+1)
-            else: draw.line(list(pts), 255, style)
+            if width==0 and value==0: draw.polygon(list(pts), i+1)
+            if width==0 and value!=0: draw.polygon(list(pts), value)
+            if width!=0: draw.line(list(pts), value, width)
         
         #pgs = [np.array(g.exterior.xy).T.astype(np.int) for g in gs]
         #if style=='lab':cv2.fillPoly(rst, pgs, i+1)
         #else: cv2.drawContours(rst, pgs, -1, 255, style)
     rst = np.array(img)
     m = np.array([offsetx, scale, 0, offsety, 0, -scale]).reshape((2,3))
-    return Raster([rst], shape.prj, m)
-    
-
-def shp2mask(shp, raster, style='lab'):
-    msk = np.zeros(raster.imgs[0].shape, dtype=np.uint8)
-    offsetx, offsety, scale = raster.m.ravel()[[0,3,1]]
-    m = [1/scale, 0, 0, -1/scale, -offsetx/scale, offsety/scale]
-    gs = affine_transform(shp.shape, m)
-    img = Image.fromarray(msk)
-    draw = ImageDraw.Draw(img)
-    for i in range(len(gs)):
-        for g in gs[i]:
-            pts = np.array(g.exterior.xy).T.astype(np.int).ravel()
-            draw.polygon(list(pts), 255)
-        '''
-        pgs = [np.array(g.exterior.xy).T.astype(np.int) for g in gs[i]]
-        cv2.fillPoly(msk, pgs, 255)
-        '''
-    msk = np.array(img)
-    return Raster([msk], raster.prj, raster.m)
+    return (rst, shape.prj, m)
 
 def mp2pm(boxs, m1, prj1, prj2, m2, t1 = lambda x:x, t2 = lambda x:x):
     box = t1(np.dot(m1[:,1:], np.array(boxs).T) + m1[:,:1])
@@ -66,7 +48,45 @@ def mp2pm(boxs, m1, prj1, prj2, m2, t1 = lambda x:x, t2 = lambda x:x):
     box = t2(np.array(ct.TransformPoints(box.T)).T)
     return np.dot(inv(m2[:,1:]), box[:2]-m2[:,:1]).T
         
-def rasters2one(rasters, des, step=10, t1 = lambda x:x, t2 = lambda x:x):
+def raster2des(raster, des, step=10, out='in'):
+    imgd, prjd, md = des
+    if out != 'in': imgd = np.zeros(imgd.shape, dtype=out)
+    img, prjs, ms = raster
+    hs, ws = img.shape
+    xx = np.linspace(0,ws,100).reshape((-1,1))*[1,0]
+    yy = np.linspace(0,hs,100).reshape((-1,1))*[0,1]
+    xy = np.vstack((xx, xx+[0,hs+1], yy, yy+[ws+1,0]))
+    xy = mp2pm(xy, ms, prjs, prjd, md).astype(np.int)
+    
+    (left, top), (right, bot) = xy.min(axis=0)-step, xy.max(axis=0)+step
+    left, right = np.clip((left, right), 0, imgd.shape[1])
+    top, bot = np.clip((top, bot), 0, imgd.shape[0])
+    hb, wb = bot-top, right-left
+
+    block = np.ones((hb//step+2, wb//step+2))
+    xy = np.array(np.where(block)).T*step+[top,left]
+    xs, ys = mp2pm(xy[:,::-1], md, prjd, prjs, ms).T
+    xs.shape = ys.shape = block.shape
+    
+    rc = np.array(np.where(np.ones((hb, wb))))/step
+    xs = map_coordinates(xs, rc, cval=-100, order=1)
+    ys = map_coordinates(ys, rc, cval=-100, order=1)
+    vs = map_coordinates(img, np.array([ys, xs]), prefilter=False)
+    vs = vs.reshape((hb, wb))
+    sliced = imgd[top:bot, left:right]
+    msk = vs>sliced
+    sliced[msk] = vs[msk]
+    return (imgd, prjd, md)
+
+def rasters2des(rasters, des, step=10, out='auto'):
+    if out == 'auto': 
+        des = (np.zeros(des[0].shape, dtype=rasters[0][0].dtype), des[1], des[2])
+    elif out != 'in': des = (np.zeros(des[0].shape, dtype=out), des[1], des[2])
+    for raster in rasters: raster2des(raster, des, step)
+    return des
+
+'''
+def rasters2one(rasters, des, step=10, t1 = lambda x:x, t2 = lambda x:x, output = None):
     total = time()
     channels = [np.zeros_like(des.imgs[0], i.dtype) for i in rasters[0].imgs]
     prjd, md = des.prj, des.m
@@ -101,6 +121,7 @@ def rasters2one(rasters, des, step=10, t1 = lambda x:x, t2 = lambda x:x):
         # print('slice:', time()-start)
     # print('total time:', time()-total)
     return Raster(channels, des.prj, des.m)
+'''
 
 def get_bounds(shape, k=None):
     geoms = list(shape['shape'].values)

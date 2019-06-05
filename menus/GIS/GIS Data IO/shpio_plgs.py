@@ -27,11 +27,12 @@ class OpenHdf(fileio.Reader):
         fp, fn = osp.split(para['path'])
         fn, fe = osp.splitext(fn)
         raster = geo_struct.read_hdf(para['path'])
-        ips = ImagePlus(raster.imgs, fn)
+        imgs, prjs, ms = zip(*raster)
+        ips = ImagePlus(imgs, fn)
         IPy.show_ips(ips)
 
-        ips.data['prj'] = raster.prj
-        ips.data['trans'] = raster.m
+        ips.data['prjs'] = prjs
+        ips.data['trans'] = ms
 
 class OpenHdfS(Free):
     title = 'HDF Sequence'
@@ -67,8 +68,8 @@ class OpenHdfS(Free):
         for i in range(len(names)):
             self.progress(i, len(names))
             rs =  geo_struct.read_hdf(names[i], idx)
-            if rs.imgs[0].shape!=raster.imgs[0].shape: continue
-            if rs.imgs[0].dtype!=raster.imgs[0].dtype: continue
+            if rs[0][0].shape!=raster[0][0].shape: continue
+            if rs[0][0].dtype!=raster[0][0].dtype: continue
             rasters.append(rs)
         return rasters
 
@@ -80,7 +81,7 @@ class OpenHdfS(Free):
         sds = ds.GetSubDatasets()
         idx = [i[0] for i in sds]
         idx = [idx.index(i) for i in para['chans']]
-        raster =  geo_struct.read_hdf(para['path'], idx)
+        raster = geo_struct.read_hdf(para['path'], idx)
         #except:
         #    IPy.alert('unknown img format!')
         #    return
@@ -88,7 +89,14 @@ class OpenHdfS(Free):
         files = self.getfiles(para['path'])
         files.sort()
         rasters = self.readimgs(files[para['start']:para['end']+1:para['step']], idx, raster)
+        rasters = list(zip(*rasters))
         for i in range(len(idx)):
+            imgs, prjs, trans = zip(*rasters[i])
+            ips = ImagePlus(imgs, '%s-%s'%(para['title'], idx[i]))
+            ips.data['prjs'] = prjs
+            ips.data['trans'] = trans
+            IPy.show_ips(ips)
+            '''
             imgs, ms, prjs = [], [], []
             for rs in rasters:
                 imgs.append(rs.imgs[i])
@@ -98,5 +106,22 @@ class OpenHdfS(Free):
             ips.data['trans'] = ms
             ips.data['prjs'] = prjs
             IPy.show_ips(ips)
+            '''
 
-plgs = [OpenShp, OpenHdf, OpenHdfS]
+class OpenTif(fileio.Reader):
+    title = 'Tif Open'
+    filt = ['TIF']
+
+    #process
+    def run(self, para = None):
+        fp, fn = osp.split(para['path'])
+        fn, fe = osp.splitext(fn)
+        raster = geo_struct.read_tif(para['path'])
+        imgs, prjs, ms = zip(*raster)
+        ips = ImagePlus(imgs, fn)
+        IPy.show_ips(ips)
+
+        ips.data['prjs'] = prjs
+        ips.data['trans'] = ms
+
+plgs = [OpenShp, OpenHdf, OpenHdfS, OpenTif]
