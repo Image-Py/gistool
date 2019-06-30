@@ -28,7 +28,7 @@ def get_ndvi(ndvi, lab, area, df):
     idx = np.zeros(len(df)+1, dtype=np.uint8)
     idx[info['index_x']+1] = info['index_y']+1
 
-    f = lambda d, u:np.searchsorted([0, d, u, 1], np.linspace(-1,1,256))
+    f = lambda d, u:np.searchsorted([0, d, u, 1], np.linspace(0,1,256))
     sinfo = info[['index_x', 'index_y', 'UP', 'DOWN']]
     lut = np.zeros((len(df)+1,256), dtype=np.uint8)
     for i in sinfo.index:

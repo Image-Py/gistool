@@ -1,5 +1,5 @@
 from imagepy.core.util import fileio
-from ....gis import geo_struct
+from pygis.io import *
 from imagepy import IPy
 from imagepy.core import ImagePlus
 from imagepy.core.engine import Free
@@ -13,7 +13,7 @@ class OpenShp(fileio.Reader):
 
     #process
     def run(self, para = None):
-        a = geo_struct.read_shp(para['path'], 'gbk')
+        a = read_shp(para['path'])
         fp, fn = osp.split(para['path'])
         fn, fe = osp.splitext(fn)
         IPy.show_table(a, fn)
