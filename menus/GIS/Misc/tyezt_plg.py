@@ -15,7 +15,7 @@ import os.path as osp
 def draw(report, date):
     root, name = osp.split(report)
     print(root, name)
-    rpt = pd.read_csv(root+'/上报表格.csv', encoding='gbk')
+    rpt = pd.read_excel(root+'/上报表格.xlsx')
     month, day = int(date), int(date%1*100)
 
     bound = gpd.read_file(root+'/data/陆地国界.shp')
@@ -107,6 +107,9 @@ def draw(report, date):
             ('line', 7, '主要河流'),
             ('rect', 0, '入侵省份'),
             ('入侵县(区)', 'simsun.ttc', 240),
+            ('rect', 21, '9月份入侵'),
+            ('rect', 20, '8月分入侵'),
+            ('rect', 19, '7月份入侵'),
             ('rect', 18, '6月份入侵'),
             ('rect', 17, '5月份入侵'),
             ('rect', 16, '4月份入侵'),
@@ -171,9 +174,10 @@ def draw(report, date):
     gisdraw.draw_text(paper, '南海诸岛', (-2100,-1100), 1, ('simkai.ttf', 240), 'lt')
 
     rgb = lut[paper[0]]
+    gisdraw.draw_mask(rgb, imread(root+'/data/mark.png'))
     imsave(root+'/imgs/2019-%.2d-%.2d.png'%(month, day), rgb)
     return rgb
-    gisdraw.draw_mask(rgb, imread('mark.png'))
+    
     imsave(root+'rst.png', rgb)
     paper = [(rgb[:,:,i], paper[1], paper[2]) for i in (0,1,2)]
     gisio.write_tif(paper, 'rst.tif')
@@ -184,7 +188,7 @@ class Plugin(Free):
     para = {'path':'', 'time':0.0}
 
     def load(self):
-        self.filt = ['csv']
+        self.filt = ['xlsx']
         return True
 
     def show(self):
