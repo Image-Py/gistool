@@ -108,7 +108,7 @@ def draw(report, date):
             ('rect', 0, '入侵省份'),
             ('入侵县(区)', 'simsun.ttc', 240),
             ('rect', 21, '9月份入侵'),
-            ('rect', 20, '8月分入侵'),
+            ('rect', 20, '8月份入侵'),
             ('rect', 19, '7月份入侵'),
             ('rect', 18, '6月份入侵'),
             ('rect', 17, '5月份入侵'),
@@ -119,7 +119,9 @@ def draw(report, date):
             ('气象地理区划', 'simsun.ttc', 240),
             ('line', 4, '一级区划线'),
             ('line', 5, '二级区划线'),
-            ('line', 6, '二级区划线'),]
+            ('line', 6, '二级区划线')]
+
+    body = body[:4] + body[-4-month:]
 
     # 图例
     gisdraw.draw_style(paper, 800, -500, body, mar=(100, 100), recsize=(500,250,30),
