@@ -16,7 +16,7 @@ def draw(report, date):
     root, name = osp.split(report)
     print(root, name)
     rpt = pd.read_excel(root+'/上报表格.xlsx')
-    month, day = int(date), int(date%1*100)
+    month, day = int(date), int(round(date%1*100))
 
     bound = gpd.read_file(root+'/data/陆地国界.shp')
     back = gpd.read_file(root+'/data/地理区划_大类.shp')
