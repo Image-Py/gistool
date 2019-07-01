@@ -66,7 +66,7 @@ def draw(report, date):
                     [223,115,255]],# 9月
                    dtype=np.uint8)
 
-    roi = roi[roi['time']<=6]
+    # roi = roi[roi['time']<=6]
     # 纸张
     paper = gisdraw.make_paper(new_back, (17538, 12400), margin=0.08)
 
