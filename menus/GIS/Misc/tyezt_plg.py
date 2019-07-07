@@ -13,10 +13,19 @@ from skimage.io import imread
 import os.path as osp
 
 def draw(report, date):
+    #report = './20190705.xlsx'
+    #date = 10.0
+
     root, name = osp.split(report)
     print(root, name)
-    rpt = pd.read_excel(root+'/上报表格.xlsx')
+    rpt = pd.read_excel(report, encoding='gbk')
     month, day = int(date), int(round(date%1*100))
+
+    rpt['province'] = rpt['省']
+    rpt['city'] = rpt['市']
+    rpt['city'].fillna('市辖区', inplace=True)
+    rpt['county'] = rpt['县']
+    rpt['time'] = rpt['首次查见日期'].apply(lambda a:a.month+a.day/100)
 
     bound = gpd.read_file(root+'/data/陆地国界.shp')
     back = gpd.read_file(root+'/data/地理区划_大类.shp')
@@ -28,8 +37,14 @@ def draw(report, date):
 
     rpt = rpt[rpt['time']<=date]
     #rpt['time'] = rpt['time'].apply(lambda x:int(x.split('月')[0]))
-    rpt['long'] = rpt['province']+'_'+rpt['city']+'_'+rpt['county']
-    area['long'] = area['Province']+'_'+area['City']+'_'+area['County']
+    rpt['long'] = rpt['province']+'_'+rpt['county']
+    area['long'] = area['Province']+'_'+area['County']
+
+    rptset = set(rpt['long'])
+    areaset = set(area['long'])
+
+    outarea = sorted(list(rptset-areaset))
+    outdf = pd.DataFrame(outarea, columns=['new area'])
 
     new_back = back.to_crs(rec.crs)
     new_line = line.to_crs(rec.crs)
@@ -70,12 +85,6 @@ def draw(report, date):
     # 纸张
     paper = gisdraw.make_paper(new_back, (17538, 12400), margin=0.08)
 
-    '''
-    rgb = lut[paper[0]]
-    imsave('rst.png', rgb)
-    print('here')
-    input()
-    '''
     # 背景
     gisdraw.draw_polygon(paper, new_back, new_back['color_No_'].astype(int)+7, 0)
     gisdraw.draw_polygon(paper, new_back, 1, 10)
@@ -178,11 +187,8 @@ def draw(report, date):
     rgb = lut[paper[0]]
     gisdraw.draw_mask(rgb, imread(root+'/data/mark.png'))
     imsave(root+'/imgs/2019-%.2d-%.2d.png'%(month, day), rgb)
-    return rgb
-    
-    imsave(root+'rst.png', rgb)
-    paper = [(rgb[:,:,i], paper[1], paper[2]) for i in (0,1,2)]
-    gisio.write_tif(paper, 'rst.tif')
+
+    return rgb, outdf
 
 class Plugin(Free):
     title = '草地贪夜蛾制图'
@@ -203,7 +209,8 @@ class Plugin(Free):
 
     def run(self, para = None):
         try:
-            img = draw(para['path'], para['time'])
+            img, df = draw(para['path'], para['time'])
             IPy.show_img([img], '草地贪夜蛾分布示意图')
+            IPy.show_table(df, '新增地名列表')
         except: 
             IPy.alert('请检查数据格式！')
