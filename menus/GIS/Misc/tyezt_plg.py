@@ -5,19 +5,17 @@ import pygis.io as gisio
 import pandas as pd
 import geopandas as gpd
 import numpy as np
-from skimage.io import imsave
+from skimage.io import imsave, imread
 import pyproj
 from PIL import Image
 Image.MAX_IMAGE_PIXELS=None
-from skimage.io import imread
 import os.path as osp
 
-def draw(report, date):
+def draw(report, date, text, point=False, limit=True, check=False):
     #report = './20190705.xlsx'
     #date = 10.0
 
     root, name = osp.split(report)
-    print(root, name)
     rpt = pd.read_excel(report, encoding='gbk')
     month, day = int(date), int(round(date%1*100))
 
@@ -34,7 +32,6 @@ def draw(report, date):
     area = gpd.read_file(root+'/data/全国县级行政区划2015.shp')
     rec = gpd.read_file(root+'/data/南海-矩形.shp')
     pro = gpd.read_file(root+'/data/省界_2015.shp')
-
     rpt = rpt[rpt['time']<=date]
     #rpt['time'] = rpt['time'].apply(lambda x:int(x.split('月')[0]))
     rpt['long'] = rpt['province']+'_'+rpt['county']
@@ -45,7 +42,7 @@ def draw(report, date):
 
     outarea = sorted(list(rptset-areaset))
     outdf = pd.DataFrame(outarea, columns=['new area'])
-
+    if check: return outdf
     new_back = back.to_crs(rec.crs)
     new_line = line.to_crs(rec.crs)
     new_river = river.to_crs(rec.crs)
@@ -76,7 +73,7 @@ def draw(report, date):
                     [252,196,76 ],
                     [250,250,100],
                     [152,230,0  ],
-                    [190,232,255],
+                    [115,223,255],
                     [0  ,197,255],
                     [223,115,255]],# 9月
                    dtype=np.uint8)
@@ -94,55 +91,61 @@ def draw(report, date):
     gisdraw.draw_line(paper, new_bound, 3, 10)
 
     # 灾区
-    gisdraw.draw_polygon(paper, roi, roi['time']+12, 0)
-    gisdraw.draw_polygon(paper, roi, 2, 10)
+    if point:
+        roip = gpd.GeoDataFrame(roi.centroid.buffer(15000), columns=['geometry'], crs=roi.crs)
+        gisdraw.draw_polygon(paper, roi, 2, 10)
+    else: roip = roi
+    gisdraw.draw_polygon(paper, roip, roi['time']+12, 0)
+    gisdraw.draw_polygon(paper, roip, 1, 5)
 
     # 入侵省份
     gisdraw.draw_polygon(paper, roi_pro, 1, 15)
     # 南北东西界线， 河流
     gisdraw.draw_line(paper, new_river, 7, 30)
-    gisdraw.draw_line(paper, new_line, new_line['class'].astype(int)+3, 30)
+    if limit: gisdraw.draw_line(paper, new_line, new_line['class'].astype(int)+3, 30)
 
     # 入侵省份文字
-    gisdraw.draw_lab(paper, roi_pro, 'name', 1, ('simsun.ttc', 180), 'center')
+    gisdraw.draw_lab(paper, roi_pro, 'name', 1, (root+'/fonts/simsun.ttc', 180), 'center')
 
     # 比例尺
-    gisdraw.draw_unit(paper, 3000, -500, 0.3, 150, ('times.ttf', 200), 1, 'km', 20)
+    gisdraw.draw_unit(paper, 3000, -500, 0.3, 150, (root+'/fonts/times.ttf', 200), 1, 'km', 20)
 
     # 指北针
-    gisdraw.draw_N(paper, -1800, 1200, ('msyh.ttc', 300), 20, 400, 1)
+    gisdraw.draw_N(paper, -1800, 1200, (root+'/fonts/msyh.ttc', 300), 20, 400, 1)
 
-    body = [('图例', 'simkai.ttf', 300),
+    c_or_r = ['rect', 'circle'][point]
+    body = [('图例', root+'/fonts/simkai.ttf', 300),
             ('line', 7, '主要河流'),
             ('rect', 0, '入侵省份'),
-            ('入侵县(区)', 'simsun.ttc', 240),
-            ('rect', 21, '9月份入侵'),
-            ('rect', 20, '8月份入侵'),
-            ('rect', 19, '7月份入侵'),
-            ('rect', 18, '6月份入侵'),
-            ('rect', 17, '5月份入侵'),
-            ('rect', 16, '4月份入侵'),
-            ('rect', 15, '3月份入侵'),
-            ('rect', 14, '2月份入侵'),
-            ('rect', 13, '1月份入侵'),
-            ('气象地理区划', 'simsun.ttc', 240),
+            ('入侵县(区)', root+'/fonts/simsun.ttc', 240),
+            (c_or_r, 21, '9月份入侵'),
+            (c_or_r, 20, '8月份入侵'),
+            (c_or_r, 19, '7月份入侵'),
+            (c_or_r, 18, '6月份入侵'),
+            (c_or_r, 17, '5月份入侵'),
+            (c_or_r, 16, '4月份入侵'),
+            (c_or_r, 15, '3月份入侵'),
+            (c_or_r, 14, '2月份入侵'),
+            (c_or_r, 13, '1月份入侵'),
+            ('气象地理区划', root+'/fonts/simsun.ttc', 240),
             ('line', 4, '一级区划线'),
             ('line', 5, '二级区划线'),
             ('line', 6, '二级区划线')]
 
     body = body[:4] + body[-4-month:]
+    if not limit: body = body[:-2]
 
     # 图例
     gisdraw.draw_style(paper, 800, -500, body, mar=(100, 100), recsize=(500,250,30),
-                       font=('simsun.ttc', 240, 1), box=20)
+                       font=(root+'/fonts/simsun.ttc', 240, 1), box=20)
 
     # 标题
     gisdraw.draw_text(paper, '我国草地贪夜蛾入侵分布示意图\n截至2019年%d月%d日'%(month, day),
-                      (800,570), 1, ('simkai.ttf', 480), 'lt')
+                      (800,570), 1, (root+'/fonts/simkai.ttf', 480), 'lt', 'center')
 
     # 标尺
     paper[0][-400:] = 0
-    gisdraw.draw_ruler(paper, 600, 400, -600, -400, 5, {'init': 'epsg:4326'}, ('times.ttf', 200), 1, 20, 100)
+    gisdraw.draw_ruler(paper, 600, 400, -600, -400, 5, {'init': 'epsg:4326'}, (root+'/fonts/times.ttf', 200), 1, 20, 100)
 
     prj1, prj2 = pyproj.CRS({'init': 'epsg:4326'}), pyproj.CRS(rec.crs)
     ct = pyproj.Transformer.from_crs(prj1, prj2)
@@ -173,27 +176,40 @@ def draw(report, date):
     gisdraw.draw_line(paper, clip_bound, 3, 10)
 
     clip_roi = gpd.overlay(rec, roi)
-    gisdraw.draw_polygon(paper, clip_roi, clip_roi['time']+12, 0)
-    gisdraw.draw_polygon(paper, clip_roi, 2, 5)
+    if point:
+        clip_roip = gpd.GeoDataFrame(clip_roi.centroid.buffer(10000), columns=['geometry'], crs=clip_roi.crs)
+        gisdraw.draw_polygon(paper, clip_roi, 2, 5)
+    else: clip_roip = clip_roi
+    gisdraw.draw_polygon(paper, clip_roip, clip_roi['time']+12, 0)
+    gisdraw.draw_polygon(paper, clip_roip, 2, 5)
 
     clip_pro = gpd.overlay(rec, roi_pro)
-    gisdraw.draw_lab(paper, clip_pro, 'name', 1, ('simsun.ttc', 120), 'center')
+    gisdraw.draw_lab(paper, clip_pro, 'name', 1, (root+'/fonts/simsun.ttc', 120), 'center')
 
     gisdraw.draw_ruler(paper, int(lt[0]), int(lt[1]), int(rb[0]), int(rb[1]), 5,
-                       {'init': 'epsg:4326'}, ('times.ttf', 120), 1, 10, 50)
+                       {'init': 'epsg:4326'}, (root+'/fonts/times.ttf', 120), 1, 10, 50)
 
-    gisdraw.draw_text(paper, '南海诸岛', (-2100,-1100), 1, ('simkai.ttf', 240), 'lt')
+    gisdraw.draw_text(paper, '南海诸岛', (-2100,-1100), 1, (root+'/fonts/simkai.ttf', 240), 'lt')
 
+    #mskimg = np.load(root+'/data/mark.npy')
+    mskimg = imread(root+['/data/mark2.png','/data/mark1.png'][limit])
+
+    gisdraw.draw_text(paper, '\n'.join(text), (3000,-2000), 1, (root+'/fonts/simsun.ttc', 200), 'lb', 'left')
+    #print(mskimg.shape)
     rgb = lut[paper[0]]
-    gisdraw.draw_mask(rgb, imread(root+'/data/mark.png'))
+    del bound, back, line, river, area, rec, pro
+    del rpt, new_back, new_line, new_river, new_bound, new_area, new_pro
+    del roi, roi_pro, clip_back
+    gisdraw.draw_mask(rgb, mskimg)
+    del mskimg, paper
     imsave(root+'/imgs/2019-%.2d-%.2d.png'%(month, day), rgb)
-
-    return rgb, outdf
+    return rgb
 
 class Plugin(Free):
     title = '草地贪夜蛾制图'
 
-    para = {'path':'', 'time':0.0}
+    para = {'path':'', 'time':0.0, 'check':False, 'line':True, 'type':'area', 
+        't1':'注：'+' '*40, 't2':'','t3':'','t4':'','t5':'','t6':'','t7':'','t8':''}
 
     def load(self):
         self.filt = ['xlsx']
@@ -204,13 +220,32 @@ class Plugin(Free):
         rst = IPy.getpath('Import sequence', filt, 'open', self.para)
         if not rst: return rst
 
-        self.view = [(float, 'time', (1, 12.31), 2, '入侵时间', '(月.日)用小数表示')]
+        self.view = [(float, 'time', (1, 12.31), 2, '入侵时间', '(月.日)用小数表示'),
+                     (bool, 'check', '县名称检查'),
+                     (bool, 'line', '显示2级区划线'),
+                     (list, 'type', ['点图', '面图'], str, '灾区标识', ''),
+                     ('lab', '', '='*20+' 以下是备注 '+'='*20),
+                     (str, 't1', '备注1：', ''),
+                     (str, 't2', '备注2：', ''),
+                     (str, 't3', '备注3：', ''),
+                     (str, 't4', '备注4：', ''),
+                     (str, 't5', '备注5：', ''),
+                     (str, 't6', '备注6：', ''),
+                     (str, 't7', '备注7：', ''),
+                     (str, 't8', '备注8：', '')]
         return IPy.get_para(self.title, self.view, self.para)
 
     def run(self, para = None):
+        path = para['path']
+        date = para['time']
+        check = para['check']
+        line = para['line']
+        point = para['type'] == '点图'
+        text = [para['t%d'%i] for i in (1,2,3,4,5,6,7,8)]
+
         try:
-            img, df = draw(para['path'], para['time'])
-            IPy.show_img([img], '草地贪夜蛾分布示意图')
-            IPy.show_table(df, '新增地名列表')
+            rst = draw(path, date, text, point, line, check)
+            if check: IPy.show_table(rst, '新增地名列表')
+            else: IPy.show_img([rst], '草地贪夜蛾分布示意图')
         except: 
             IPy.alert('请检查数据格式！')
