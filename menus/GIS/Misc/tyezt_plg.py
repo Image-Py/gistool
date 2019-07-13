@@ -194,7 +194,7 @@ def draw(report, date, text, point=False, limit=True, check=False):
     #mskimg = np.load(root+'/data/mark.npy')
     mskimg = imread(root+['/data/mark2.png','/data/mark1.png'][limit])
 
-    gisdraw.draw_text(paper, '\n'.join(text), (3000,-2000), 1, (root+'/fonts/simsun.ttc', 200), 'lb', 'left')
+    gisdraw.draw_text(paper, '\n'.join(text), (3000,-1500), 1, (root+'/fonts/simsun.ttc', 200), 'lb', 'left')
     #print(mskimg.shape)
     rgb = lut[paper[0]]
     del bound, back, line, river, area, rec, pro
@@ -242,6 +242,7 @@ class Plugin(Free):
         line = para['line']
         point = para['type'] == '点图'
         text = [para['t%d'%i] for i in (1,2,3,4,5,6,7,8)]
+        text = [i for i in text if len(i)>1]
 
         try:
             rst = draw(path, date, text, point, line, check)
