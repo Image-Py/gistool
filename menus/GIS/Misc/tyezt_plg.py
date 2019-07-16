@@ -52,7 +52,7 @@ def draw(report, date, text, point=False, limit=True, check=False):
 
     roi = new_area.merge(rpt[['long', 'time']], on='long', how='inner')
 
-    roi_pro = new_pro[np.array([i in roi['Province'].unique() for i in pro['Province']])]
+    roi_pro = new_pro#new_pro[np.array([i in roi['Province'].unique() for i in pro['Province']])]
 
     lut = np.array([[255,255,255], # 底色
                     [0  ,0  ,0  ], # 省界
@@ -116,7 +116,7 @@ def draw(report, date, text, point=False, limit=True, check=False):
     c_or_r = ['rect', 'circle'][point]
     body = [('图例', root+'/fonts/simkai.ttf', 300),
             ('line', 7, '主要河流'),
-            ('rect', 0, '入侵省份'),
+            ('rect', 0, '省界'),
             ('入侵县(区)', root+'/fonts/simsun.ttc', 240),
             (c_or_r, 21, '9月份入侵'),
             (c_or_r, 20, '8月份入侵'),
