@@ -5,8 +5,9 @@ import numpy as np
 from glob import glob
 import geopandas as gpd
 from imagepy.core.manager import TableManager
-from pygis.util import *
-from pygis.io import *
+import pygis.util as gutil
+import pygis.io as gio
+import pygis.draw as gdraw
 
 '''
 单张绘图(图，表，定值、字段)
@@ -15,7 +16,7 @@ from pygis.io import *
 多张绘图(图，索引，表，定值字段)
 '''
 class Empty(Table):
-	title = 'Box Paper'
+	title = 'Make Paper'
 	note = ['snap', 'row_msk']
 	para = {'width':1024, 'height':768, 'margin':0.1, 'type':'8-bit', 'key':None}
 	
@@ -44,6 +45,22 @@ class Empty(Table):
 		ips = ImagePlus(imgs, tps.title)
 		ips.data['prjs'], ips.data['trans'] = prjs, ms
 		IPy.show_ips(ips)
+
+class Empty(Table):
+	title = 'Make Paper'
+	note = ['snap', 'row_msk']
+	para = {'unit':100, 'margin':0.1, 'type':'8-bit'}
+	
+	view = [(float, 'unit', (0.01, 10240), 3, 'unit', ''),
+			(float, 'margin', (0, 0.3), 2, 'margin', ''),
+			(list, 'type', ['8-bit', '16-bit'], str, 'type', '')]
+
+	def run(self, tps, snap, data, para=None):
+		shape = data.loc[tps.rowmsk]
+		dtype = {'8-bit':np.uint8, '16-bit':np.uint16}[para['type']]
+		ground = gutil.make_paper(shape, para['unit'], margin=para['margin'], dtype=dtype)
+		gdraw.draw_polygon(ground, shape, 255, 0)
+		IPy.show_img([ground], tps.title)
 
 class BuildIndex(Free):
 	title = 'Build Geo Index'
