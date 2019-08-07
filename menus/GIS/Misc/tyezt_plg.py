@@ -17,6 +17,7 @@ def draw(report, date, text, point=False, limit=True, check=False):
 
     root, name = osp.split(report)
     rpt = pd.read_excel(report, encoding='gbk')
+    text.append('已入侵%d个县'%len(rpt))
     month, day = int(date), int(round(date%1*100))
 
     rpt['province'] = rpt['省']
@@ -33,7 +34,6 @@ def draw(report, date, text, point=False, limit=True, check=False):
     rec = gpd.read_file(root+'/data/南海-矩形.shp')
     pro = gpd.read_file(root+'/data/省界_2015.shp')
     rpt = rpt[rpt['time']<=date]
-    #rpt['time'] = rpt['time'].apply(lambda x:int(x.split('月')[0]))
     rpt['long'] = rpt['province']+'_'+rpt['county']
     area['long'] = area['Province']+'_'+area['County']
 
@@ -74,11 +74,10 @@ def draw(report, date, text, point=False, limit=True, check=False):
                     [250,250,100],
                     [152,230,0  ],
                     [115,223,255],
-                    [0  ,197,255],
+                    [0  ,77 ,168],
                     [223,115,255]],# 9月
-                   dtype=np.uint8)
+                    dtype=np.uint8)
 
-    # roi = roi[roi['time']<=6]
     # 纸张
     paper = gisdraw.make_paper(new_back, (17538, 12400), margin=0.08)
 
@@ -95,7 +94,7 @@ def draw(report, date, text, point=False, limit=True, check=False):
         roip = gpd.GeoDataFrame(roi.centroid.buffer(15000), columns=['geometry'], crs=roi.crs)
         gisdraw.draw_polygon(paper, roi, 2, 10)
     else: roip = roi
-    gisdraw.draw_polygon(paper, roip, roi['time']+12, 0)
+    gisdraw.draw_polygon(paper, roip, roi['time'].astype(int)+12, 0)
     gisdraw.draw_polygon(paper, roip, 1, 5)
 
     # 入侵省份
@@ -136,7 +135,7 @@ def draw(report, date, text, point=False, limit=True, check=False):
     if not limit: body = body[:-2]
 
     # 图例
-    gisdraw.draw_style(paper, 800, -500, body, mar=(100, 100), recsize=(500,250,30),
+    gisdraw.draw_style(paper, 800, -500, body, mar=(100, 100), recsize=(500,250,5),
                        font=(root+'/fonts/simsun.ttc', 240, 1), box=20)
 
     # 标题
@@ -144,7 +143,7 @@ def draw(report, date, text, point=False, limit=True, check=False):
                       (800,570), 1, (root+'/fonts/simkai.ttf', 480), 'lt', 'center')
 
     # 标尺
-    paper[0][-400:] = 0
+    paper[-400:] = 0
     gisdraw.draw_ruler(paper, 600, 400, -600, -400, 5, {'init': 'epsg:4326'}, (root+'/fonts/times.ttf', 200), 1, 20, 100)
 
     prj1, prj2 = pyproj.CRS({'init': 'epsg:4326'}), pyproj.CRS(rec.crs)
@@ -155,13 +154,13 @@ def draw(report, date, text, point=False, limit=True, check=False):
     rec_lt = [[4072223.5615089145], [2546481.2812095657]]
     rec_rb = [[5762914.442890676], [67330.48957465217]]
     new_lt = [[5948691], [3028251]]
-    loc = np.dot(np.linalg.inv(paper[2][:,1:]), new_lt-paper[2][:,:1])
-    offset = rec_lt - np.dot(paper[2][:,1:]*2, loc)
-    new_m = np.hstack((offset, paper[2][:,1:]*2))
+    loc = np.dot(np.linalg.inv(paper.mat[:,1:]), new_lt-paper.mat[:,:1])
+    offset = rec_lt - np.dot(paper.mat[:,1:]*2, loc)
+    new_m = np.hstack((offset, paper.mat[:,1:]*2))
 
-    paper = (paper[0], paper[1], new_m)
-    lt = np.dot(np.linalg.inv(paper[2][:,1:]), rec_lt-paper[2][:,:1])
-    rb = np.dot(np.linalg.inv(paper[2][:,1:]), rec_rb-paper[2][:,:1])
+    paper.mat = new_m
+    lt = np.dot(np.linalg.inv(paper.mat[:,1:]), rec_lt-paper.mat[:,:1])
+    rb = np.dot(np.linalg.inv(paper.mat[:,1:]), rec_rb-paper.mat[:,:1])
 
 
     clip_back = gpd.overlay(rec, new_back)
@@ -180,7 +179,7 @@ def draw(report, date, text, point=False, limit=True, check=False):
         clip_roip = gpd.GeoDataFrame(clip_roi.centroid.buffer(10000), columns=['geometry'], crs=clip_roi.crs)
         gisdraw.draw_polygon(paper, clip_roi, 2, 5)
     else: clip_roip = clip_roi
-    gisdraw.draw_polygon(paper, clip_roip, clip_roi['time']+12, 0)
+    gisdraw.draw_polygon(paper, clip_roip, clip_roi['time'].astype(int)+12, 0)
     gisdraw.draw_polygon(paper, clip_roip, 2, 5)
 
     clip_pro = gpd.overlay(rec, roi_pro)
@@ -196,7 +195,7 @@ def draw(report, date, text, point=False, limit=True, check=False):
 
     gisdraw.draw_text(paper, '\n'.join(text), (3000,-1500), 1, (root+'/fonts/simsun.ttc', 200), 'lb', 'left')
     #print(mskimg.shape)
-    rgb = lut[paper[0]]
+    rgb = lut[paper]
     del bound, back, line, river, area, rec, pro
     del rpt, new_back, new_line, new_river, new_bound, new_area, new_pro
     del roi, roi_pro, clip_back
