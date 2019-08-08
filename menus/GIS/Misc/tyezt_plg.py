@@ -17,7 +17,7 @@ def draw(report, date, text, point=False, limit=True, check=False):
 
     root, name = osp.split(report)
     rpt = pd.read_excel(report, encoding='gbk')
-    text.append('已入侵%d个县'%len(rpt))
+    
     month, day = int(date), int(round(date%1*100))
 
     rpt['province'] = rpt['省']
@@ -112,20 +112,21 @@ def draw(report, date, text, point=False, limit=True, check=False):
     # 指北针
     gisdraw.draw_N(paper, -1800, 1200, (root+'/fonts/msyh.ttc', 300), 20, 400, 1)
 
+    bins = list(np.bincount(rpt['time'])[1:])+['-']*10
     c_or_r = ['rect', 'circle'][point]
     body = [('图例', root+'/fonts/simkai.ttf', 300),
             ('line', 7, '主要河流'),
             ('rect', 0, '省界'),
             ('入侵县(区)', root+'/fonts/simsun.ttc', 240),
-            (c_or_r, 21, '9月份入侵'),
-            (c_or_r, 20, '8月份入侵'),
-            (c_or_r, 19, '7月份入侵'),
-            (c_or_r, 18, '6月份入侵'),
-            (c_or_r, 17, '5月份入侵'),
-            (c_or_r, 16, '4月份入侵'),
-            (c_or_r, 15, '3月份入侵'),
-            (c_or_r, 14, '2月份入侵'),
-            (c_or_r, 13, '1月份入侵'),
+            (c_or_r, 21, '9月(%s个)'%bins[8]),
+            (c_or_r, 20, '8月(%s个)'%bins[7]),
+            (c_or_r, 19, '7月(%s个)'%bins[6]),
+            (c_or_r, 18, '6月(%s个)'%bins[5]),
+            (c_or_r, 17, '5月(%s个)'%bins[4]),
+            (c_or_r, 16, '4月(%s个)'%bins[3]),
+            (c_or_r, 15, '3月(%s个)'%bins[2]),
+            (c_or_r, 14, '2月(%s个)'%bins[1]),
+            (c_or_r, 13, '1月(%s个)'%bins[0]),
             ('气象地理区划', root+'/fonts/simsun.ttc', 240),
             ('line', 4, '一级区划线'),
             ('line', 5, '二级区划线'),
