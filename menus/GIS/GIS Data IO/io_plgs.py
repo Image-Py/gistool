@@ -1,5 +1,5 @@
 from imagepy.core.util import fileio
-import pygis.io as gio
+import geonumpy.io as gio
 from imagepy import IPy
 from imagepy.core import ImagePlus
 from imagepy.core.engine import Free, Simple
@@ -91,7 +91,7 @@ class OpenGeoSequence(Free):
         filt = '|'.join(['%s files (*.%s)|*.%s'%(i.upper(),i,i) for i in self.filt])
         rst = IPy.getpath('Import sequence', filt, 'open', self.para)
         if not rst: return rst
-        shp, prj, m, chans = gio.read_raster_info(self.para['path'])
+        shp, prj, m, chans = gio.read_raster_box(self.para['path'])
         files = self.getfiles(self.para['path'])
         nfs = len(files)
         self.para['end'] = nfs-1
@@ -111,7 +111,7 @@ class OpenGeoSequence(Free):
         rasters = []
         for i,name in enumerate(names):
             self.progress(i, len(names))
-            shp, prj, m, chans = gio.read_raster_info(name)
+            shp, prj, m, chans = gio.read_raster_box(name)
             if shp!=shp0: continue
             rs =  gio.read_raster(name, idx)
             rasters.append(rs)
@@ -120,7 +120,7 @@ class OpenGeoSequence(Free):
     #process
     def run(self, para = None):
         if len(para['chans']) == 0: return
-        shp, prj, m, chans = gio.read_raster_info(para['path'])
+        shp, prj, m, chans = gio.read_raster_box(para['path'])
         chans = [i[-50:] for i in chans]
         idx = [chans.index(i) for i in para['chans']]
         files = self.getfiles(para['path'])

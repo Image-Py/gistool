@@ -1,7 +1,7 @@
 import scipy.ndimage as ndimg
 import numpy as np
 from imagepy.core.engine import Filter, Simple
-from pygis.repair import *
+from geonumpy.pretreat import degap
 
 class GapRepair(Simple):
     title = 'Gap Repair'

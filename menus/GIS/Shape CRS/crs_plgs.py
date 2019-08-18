@@ -1,7 +1,8 @@
 from imagepy.core.engine import Table
 from imagepy import IPy
 import geopandas as gpd
-import pygis.io as gio
+import geonumpy.util as gutil
+
 
 class ShowCRS(Table):
 	title = 'Show WKT CRS'
@@ -9,7 +10,7 @@ class ShowCRS(Table):
 	def run(self, tps, snap, data, para = None):
 		if not isinstance(data, gpd.GeoDataFrame):
 			return IPy.alert('geo table needed!')
-		IPy.show_md(tps.title, gio.makeprj(data.crs).to_wkt())
+		IPy.show_log(tps.title, gutil.makecrs(data.crs).to_wkt())
 
 class EPSG(Table):
 	title = 'Project By EPSG'

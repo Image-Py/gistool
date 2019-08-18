@@ -1,7 +1,7 @@
 from imagepy.core.engine import Free
 from imagepy import IPy
-import pygis.draw as gisdraw
-import pygis.io as gisio
+import geonumpy.draw as gisdraw
+import geonumpy.io as gisio
 import pandas as pd
 import geopandas as gpd
 import numpy as np
@@ -248,5 +248,5 @@ class Plugin(Free):
             rst = draw(path, date, text, point, line, check)
             if check: IPy.show_table(rst, '新增地名列表')
             else: IPy.show_img([rst], '草地贪夜蛾分布示意图')
-        except: 
-            IPy.alert('请检查数据格式！')
+        except Exception as  e:
+            IPy.alert('请检查数据格式！\n' + str(e))
