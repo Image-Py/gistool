@@ -99,7 +99,7 @@ class OpenGeoSequence(Free):
                      (int, 'start', (0, nfs-1), 0, 'Start', '0~{}'.format(nfs-1)),
                      (int, 'end',   (0, nfs-1), 0, 'End', '0~{}'.format(nfs-1)),
                      (int, 'step',  (0, nfs-1), 0, 'Step', ''),
-                     ('chos', 'chans', [i[-50:] for i in chans], 'Channels')]
+                     ('chos', 'chans', chans, 'Channels')]
         return IPy.get_para('Import sequence', self.view, self.para)
 
     def getfiles(self, name):
@@ -121,8 +121,8 @@ class OpenGeoSequence(Free):
     def run(self, para = None):
         if len(para['chans']) == 0: return
         shp, prj, m, chans = gio.read_raster_box(para['path'])
-        chans = [i[-50:] for i in chans]
         idx = [chans.index(i) for i in para['chans']]
+        print(para['chans'], idx, '==========')
         files = self.getfiles(para['path'])
         rasters = self.readimgs(files, idx, shp)
         IPy.show_img(rasters, para['title'])
