@@ -1,0 +1,1 @@
+catlog = ['New Map Viewer', 'mapview_plg']
